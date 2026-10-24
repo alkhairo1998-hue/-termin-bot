@@ -1,0 +1,44 @@
+name: Termin pruefen
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: "Nur Testnachricht senden (1 = ja)"
+        required: false
+        default: "0"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten installieren
+        run: |
+          pip install requests playwright
+          playwright install --with-deps chromium
+
+      - name: Seite pruefen
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEST_MESSAGE: ${{ github.event.inputs.test_message }}
+        run: python etermin_check.py
+
+      - name: Screenshot speichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: |
+            screenshot.png
+            page.txt
+          if-no-files-found: ignore
